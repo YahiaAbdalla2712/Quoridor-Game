@@ -22,6 +22,20 @@ class QuoridorGUI:
         self.pawn_p2_img = pygame.transform.scale(self.pawn_p2_img, (pawn_size, pawn_size))
         self.pawn_size = pawn_size
 
+        self.player1_icon = pygame.image.load(os.path.join(ASSETS_DIR, "BlueHuman.png")).convert_alpha()
+        self.player2_icon = pygame.image.load(os.path.join(ASSETS_DIR, "RedHuman.png")).convert_alpha()
+
+        self.player1_icon = pygame.transform.scale(self.player1_icon, (80, 80))
+        self.player2_icon = pygame.transform.scale(self.player2_icon, (80, 80))
+
+    def draw_players_icons(self):
+        x1 = 80
+        y1 = 20
+        x2 = self.screen.get_width() - 160
+        y2 = 20
+        self.screen.blit(self.player1_icon, (x1, y1))
+        self.screen.blit(self.player2_icon, (x2, y2))
+
     def draw_pawn(self, image, x, y):
         px = (x + 5) * self.cell_size + (self.cell_size - self.pawn_size) // 2
         py = (y + 2) * self.cell_size + (self.cell_size - self.pawn_size) // 2
@@ -40,6 +54,7 @@ class QuoridorGUI:
 
         self.draw_pawn(self.pawn_p1_img, p1_x, p1_y)
         self.draw_pawn(self.pawn_p2_img, p2_x, p2_y)
+        self.draw_players_icons()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -57,3 +72,4 @@ if __name__ == "__main__":
     players = [Player("Player1"), Player("Player2", is_ai=True)]
     gui = QuoridorGUI(board, players)
     gui.game_loop()
+
