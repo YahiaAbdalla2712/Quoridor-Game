@@ -8,8 +8,7 @@ class Player:
         if self.is_ai:
             return self.ai_move(board)
         else:
-
-            pass
+            return None
 
     def ai_move(self, board):
 
