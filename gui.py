@@ -74,6 +74,7 @@ class QuoridorGUI:
             icon=self.wall_icon,
             icon_size=45
         )
+
         self.button_vertical_1 = Button(
             x=60, y=400, w=180, h=50,
             text="Add Wall ",
@@ -83,6 +84,7 @@ class QuoridorGUI:
             icon=self.wall_icon_v,
             icon_size=45
         )
+
         self.button_horizontal_2 = Button(
             x=self.screen.get_width()-230, y=300, w=180, h=50,
             text="Add Wall ",
@@ -92,6 +94,7 @@ class QuoridorGUI:
             icon=self.wall_icon,
             icon_size=45
         )
+
         self.button_vertical_2 = Button(
             x=self.screen.get_width()-230, y=400, w=180, h=50,
             text="Add Wall ",
@@ -101,6 +104,7 @@ class QuoridorGUI:
             icon=self.wall_icon_v,
             icon_size=45
         )
+
         self.button_vshuman = Button(
             x=230, y=300, w=250, h=150,
             text="VS Player",
@@ -108,6 +112,7 @@ class QuoridorGUI:
             bg_color=(200, 50, 50),
             text_color=(255, 255, 255),
         )
+
         self.button_vsAI = Button(
             x=self.screen.get_width() - 480, y=300, w=250, h=150,
             text="VS AI",
@@ -115,16 +120,28 @@ class QuoridorGUI:
             bg_color=(200, 50, 50),
             text_color=(255, 255, 255),
         )
+
         self.board.pawns = {
             "Player1": (0, self.board.size // 2),
             "Player2": (self.board.size - 1, self.board.size // 2)
         }
+
         self.pawn_images = {
             "Player1": self.pawn_p1_img,
             "Player2": self.pawn_p2_img
         }
 
         self.label1 = self.font.render("Turn", True, self.text_color)
+
+        self.temp_message = ""
+        self.temp_message_time = 2000
+        self.font = pygame.font.SysFont("arial", 28)
+
+        self.winner = None
+
+    def show_temp_message(self, msg, duration=1500):
+        self.temp_message = msg
+        self.temp_message_time = pygame.time.get_ticks() + duration
 
     def draw_menu(self):
         self.screen.fill((30, 10, 70))
@@ -177,6 +194,7 @@ class QuoridorGUI:
                 self.button_horizontal_2.draw(self.screen)
                 self.button_vertical_2.draw(self.screen)
 
+
     def draw_pawn(self, image, row, col):
         px = (col + 5) * self.cell_size + (self.cell_size - self.pawn_size) // 2
         py = (row + 2) * self.cell_size + (self.cell_size - self.pawn_size) // 2
@@ -190,8 +208,8 @@ class QuoridorGUI:
         self.screen.blit(self.label1, ((self.screen.get_width()/2)-30, 30))
 
     def write_walls_left(self):
-        label1 = self.font.render("Walls left:", True, self.text_color)
-        label2 = self.font.render("Walls left:", True, self.text_color)
+        label1 = self.font.render(f"Walls left: {self.players[1].walls_remaining}", True, self.text_color)
+        label2 = self.font.render(f"Walls left: {self.players[0].walls_remaining}", True, self.text_color)
         self.screen.blit(label1, (60, 200))
         self.screen.blit(label2, (self.screen.get_width()-190, 200))
 
@@ -233,6 +251,10 @@ class QuoridorGUI:
                     x += self.cell_size - 21
                 self.screen.blit(icon, (x, y))
 
+        if self.temp_message and pygame.time.get_ticks() < self.temp_message_time:
+            text = self.font.render(self.temp_message, True, (255, 0, 0))
+            self.screen.blit(text, (self.screen.get_width()/2 - 100, 720))
+
         self.draw_players_icons()
         self.write_turn()
         self.write_walls_left()
@@ -249,6 +271,24 @@ class QuoridorGUI:
 
         if 0 <= col < self.board.size - 1 and 0 <= row < self.board.size - 1:
             return (row, col)
+        return None
+
+    def check_for_win(self):
+        p1_r, p1_c = self.board.pawns["Player1"]
+        p2_r, p2_c = self.board.pawns["Player2"]
+
+        if p1_r == self.board.size - 1:
+            self.is_finished = True
+            self.winner = self.players[0] 
+            self.show_temp_message(f"{self.winner.name} Wins!")
+            return self.winner
+
+        if p2_r == 0:
+            self.is_finished = True
+            self.winner = self.players[1]  
+            self.show_temp_message(f"{self.winner.name} Wins!")
+            return self.winner
+
         return None
 
     def get_move_from_click(self, pos):
@@ -270,16 +310,37 @@ class QuoridorGUI:
             row, col = move
             self.board.pawns[player.name] = (row, col)
 
-        if isinstance(move, dict):
-            orientation = move["type"]
-            row, col = move["pos"]
 
-            if self.board.place_wall(row, col, orientation):
-                print(f"Placed wall {orientation} at ({row},{col})")
-            else:
-                print("Invalid wall placement!")
+        elif isinstance(move, dict):
+
+            if player.walls_remaining > 0:
+                player.walls_remaining -= 1
+
+    def draw_winner(self):
+        overlay = pygame.Surface((self.screen.get_width(), self.screen.get_height()))
+        overlay.set_alpha(180)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (0, 0))
+
+        font = pygame.font.SysFont(None, 64)
+        if self.winner:
+            winner_text = self.winner.name
+        else:
+            winner_text = "Player"
+
+        text = font.render(f"{winner_text} Wins!", True, (255, 255, 255))
+        rect = text.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 - 30))
+        self.screen.blit(text, rect)
+
+        small = pygame.font.SysFont(None, 28)
+        info = small.render("Click Reset to play again", True, (200, 200, 200))
+        info_rect = info.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 + 30))
+        self.screen.blit(info, info_rect)
+
+        self.button_reset.draw(self.screen)
 
     def handle_events(self):
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -292,6 +353,43 @@ class QuoridorGUI:
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
+
+                if self.button_reset.is_clicked(pos):
+                    self.is_finished = False
+                    self.winner = None
+                    self.temp_message = ""
+                    self.placing_wall = False
+                    self.placing_wall_type = None
+                    self.wall_preview_pos = None
+
+                    self.board.reset_board()
+                    self.board.pawns["Player1"] = (0, self.board.size // 2)
+                    self.board.pawns["Player2"] = (self.board.size - 1, self.board.size // 2)
+
+                    self.players[0].walls_remaining = 10
+                    self.players[1].walls_remaining = 10
+
+                    QuoridorGUI.turn = random.randint(1, 2)
+
+                if self.is_finished:
+                    if self.button_reset.is_clicked(pos):
+                        self.is_finished = False
+                        self.winner = None
+                        self.temp_message = ""
+                        self.placing_wall = False
+                        self.placing_wall_type = None
+                        self.wall_preview_pos = None
+
+                        self.board.reset_board()
+                        self.board.pawns["Player1"] = (0, self.board.size // 2)
+                        self.board.pawns["Player2"] = (self.board.size - 1, self.board.size // 2)
+
+                        self.players[0].walls_remaining = 10
+                        self.players[1].walls_remaining = 10
+
+                        QuoridorGUI.turn = random.randint(1, 2)
+
+                    return
 
                 if self.state == "menu":
                     if self.button_vshuman.is_clicked(pos):
@@ -323,19 +421,27 @@ class QuoridorGUI:
                                 self.apply_move(current_player, move)
                                 self.alternate_turn()
                             else:
-                                print("Invalid wall placement!")
+                                self.show_temp_message("Invalid wall placement!")
 
                         self.placing_wall = False
                         self.placing_wall_type = None
                         continue
 
                     if (self.button_horizontal_1.is_clicked(pos) or self.button_horizontal_2.is_clicked(pos)):
+                        current_player = self.players[QuoridorGUI.turn - 1]
+                        if current_player.walls_remaining <= 0:
+                            self.show_temp_message("No walls remaining!")
+                            continue
                         self.placing_wall = True
                         self.placing_wall_type = "H"
                         self.wall_preview_pos = pos
                         continue
 
                     if (self.button_vertical_1.is_clicked(pos) or self.button_vertical_2.is_clicked(pos)):
+                        current_player = self.players[QuoridorGUI.turn - 1]
+                        if current_player.walls_remaining <= 0:
+                            self.show_temp_message("No walls remaining!")
+                            continue
                         self.placing_wall = True
                         self.placing_wall_type = "V"
                         self.wall_preview_pos = pos
@@ -344,17 +450,31 @@ class QuoridorGUI:
                     move = self.get_move_from_click(pos)
                     if move and self.board.is_valid_move(current_player, move):
                         self.apply_move(current_player, move)
+                        winner = self.check_for_win()
+                        if winner:
+                            self.placing_wall = False
+                            self.placing_wall_type = None
+                            return
                         self.alternate_turn()
                     continue
 
     def game_loop(self):
         while self.running:
             self.handle_events()
+
+            if self.is_finished:
+                self.draw_board()  
+                self.draw_winner()
+                pygame.display.flip()
+                continue
+
             if self.state == "menu":
                 self.draw_menu()
             elif self.state == "game" or self.state == "gameai":
                 self.draw_board()
+
             pygame.display.flip()
+
 
 if __name__ == "__main__":
     board = Board()
